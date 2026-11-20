@@ -57,12 +57,12 @@ _init_log_db()
 DEFAULTS = {
     "aantal_woningen": 1000,
     "warmtevraag": 30,
-    "gasprijs_2030": 5.00,
+    "gasprijs_2030": 1.70,
     "eprijs_2030": 0.25,
-    "rendementseis": 6.0,
+    "rendementseis": 7.0,
     "subsidie": 5000,
-    "prijs_per_ton_co2": 100,
-    "netverzwaring_kosten": 50,
+    "prijs_per_ton_co2": 200,
+    "netverzwaring_kosten": 100,
     "dorp_stad_factor": 30,
     "perc_appartementen": 80,
 }
@@ -129,6 +129,8 @@ def api_calculate(secret):
         calc_id, started_clock = _log_start(values)
         try:
             results = calculate_python_model(values)
+            duration = round(perf_counter() - started_clock, 3)
+            app.logger.info("Berekening %s succesvol afgerond in %.3f s (%d bronnen)", calc_id, duration, len(results))
             _log_finish(calc_id, started_clock, "success")
             return _secure_response(make_response(jsonify({"calculation_id": calc_id, "inputs": values, "results": results})))
         except Exception as exc:

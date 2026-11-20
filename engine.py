@@ -1,8 +1,11 @@
 """Excel-backed calculator. Workbook formulas remain the calculation source of truth."""
 from __future__ import annotations
-import math, os, shutil, subprocess, tempfile, threading
+import math, os, shutil, subprocess, tempfile, threading, logging
 from pathlib import Path
 import openpyxl
+from time import perf_counter
+
+logger = logging.getLogger(__name__)
 
 BASE_DIR = Path(__file__).resolve().parent
 MODEL_FILE = BASE_DIR / "model" / "rekenmodel.xlsm"
@@ -113,7 +116,10 @@ def calculate(values):
     results=[]
     # One workbook/LibreOffice recalculation per request: the source-cost columns
     # already calculate all collective concepts side-by-side.
+    request_started = perf_counter()
+    queue_started = perf_counter()
     with _CALC_SEMAPHORE:
+        queue_seconds = perf_counter() - queue_started
         with tempfile.TemporaryDirectory(prefix="verduurzaamd-calc-") as t:
             if not MODEL_FILE.exists(): raise RuntimeError("Het Excel-rekenmodel ontbreekt op de server.")
             userprofile=Path(t)/"lo-profile"; inp=Path(t)/"input.xlsm"; outdir=Path(t)/"recalc"; outdir.mkdir()
@@ -139,9 +145,13 @@ def calculate(values):
             # and individual alternatives, but no XLOOKUP formulas are relied on.
             ws["B26"]="P2H"
             wb.calculation.fullCalcOnLoad=True; wb.calculation.forceFullCalc=True; wb.calculation.calcMode="auto"
+            save_started = perf_counter()
             wb.save(inp); wb.close()
+            save_seconds = perf_counter() - save_started
             cmd=["libreoffice",f"-env:UserInstallation=file://{userprofile}","--headless","--convert-to","xlsx","--outdir",str(outdir),str(inp)]
+            lo_started = perf_counter()
             run=subprocess.run(cmd,capture_output=True,text=True,timeout=100)
+            lo_seconds = perf_counter() - lo_started
             resultfile=outdir/"input.xlsx"
             if run.returncode!=0 or not resultfile.exists():
                 raise RuntimeError("Excel-rekenmodel kon niet worden herberekend: "+(run.stderr or run.stdout)[-700:])
@@ -162,4 +172,5 @@ def calculate(values):
             for key,label,col in INDIVIDUAL:
                 if key in selected: results.append(_read_source(rws,col,label,key))
             resultwb.close()
+            logger.info("Calc timings: queue=%.3fs workbook_save=%.3fs libreoffice=%.3fs total=%.3fs sources=%d", queue_seconds, save_seconds, lo_seconds, perf_counter()-request_started, len(results))
     return results
