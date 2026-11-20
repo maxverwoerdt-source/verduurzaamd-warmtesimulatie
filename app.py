@@ -18,6 +18,13 @@ if not SECRET_PATH or not re.fullmatch(r"[A-Za-z0-9_-]{20,100}", SECRET_PATH):
 
 app = Flask(__name__)
 
+def _memory_snapshot():
+    try:
+        with open('/proc/self/status', encoding='utf-8') as f:
+            return ' '.join(line.strip() for line in f if line.startswith(('VmRSS:', 'VmHWM:')))
+    except OSError:
+        return 'memory_metrics_unavailable'
+
 DEFAULTS = {
     "aantal_woningen": 1000,
     "warmtevraag": 30,
@@ -92,11 +99,11 @@ def api_calculate(secret):
     try:
         validation_start=time.perf_counter()
         values = _validate(request.get_json(silent=True) or {})
-        app.logger.warning("CALC PHASE validation=%.3fs",time.perf_counter()-validation_start)
+        app.logger.warning("CALC PHASE validation=%.3fs memory=%s",time.perf_counter()-validation_start,_memory_snapshot())
         calculation_start=time.perf_counter()
         results = calculate_python_model(values)
         app.logger.warning("CALC PHASE engine=%.3fs",time.perf_counter()-calculation_start)
-        app.logger.warning("CALC REQUEST success duration=%.3fs sources=%d",time.perf_counter()-request_start,len(results))
+        app.logger.warning("CALC REQUEST success duration=%.3fs sources=%d memory=%s",time.perf_counter()-request_start,len(results),_memory_snapshot())
         return _secure_response(make_response(jsonify({"inputs": values, "results": results})))
     except ValueError as exc:
         app.logger.warning("CALC REQUEST validation_error duration=%.3fs error=%s",time.perf_counter()-request_start,exc)
