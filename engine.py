@@ -48,7 +48,7 @@ def calculate(values):
     key_map = {"PVT": "PVTE"}
     for key in SOURCE_ORDER:
         data = raw[key_map.get(key, key)]
-        capital = data["kapitaallasten_per_weq_eur_per_jaar"] - data["subsidies_per_weq_eur_per_jaar"]
+        capital = data["kapitaallasten_per_weq_eur_per_jaar"]
         maintenance = data["bo_per_weq_eur_per_jaar"]
         energy = data["energiekosten_per_weq_eur_per_jaar"]
         co2 = data["co2_kosten_per_weq_eur"]
@@ -62,6 +62,7 @@ def calculate(values):
         results.append({
             "key": key,
             "label": LABELS[key],
+            "investment_per_home": investment_per_home,
             "investment_total": investment_per_home * values["aantal_woningen"],
             "electric_power_total": electrical_kw_per_home * values["aantal_woningen"],
             "capital": capital,

@@ -32,6 +32,9 @@
   ];
   const euro = value => new Intl.NumberFormat('nl-NL', {style:'currency',currency:'EUR',maximumFractionDigits:0}).format(value);
   const number = value => new Intl.NumberFormat('nl-NL', {maximumFractionDigits:0}).format(value);
+  const roundedInvestment = value => Math.round(value / 500) * 500;
+  const roundedPowerMW = value => Math.round(value / 10) / 100; // kW, rounded to 10 kW and shown in MW
+  const powerMW = value => new Intl.NumberFormat('nl-NL', {minimumFractionDigits:2, maximumFractionDigits:2}).format(roundedPowerMW(value));
 
   function syncRanges() {
     document.getElementById('densityValue').textContent = `${density.value}%`;
@@ -144,8 +147,8 @@
     tbody.innerHTML = results.map(row => `
       <tr>
         <td title="${row.detail || ''}">${row.label}</td>
-        <td>${euro(row.investment_total)}</td>
-        <td>${number(row.electric_power_total)} kW</td>
+        <td>${euro(roundedInvestment(row.investment_per_home))}</td>
+        <td>${powerMW(row.electric_power_total)} MW</td>
         <td>${euro(row.capital)}</td>
         <td>${euro(row.maintenance)}</td>
         <td>${euro(row.energy)}</td>
@@ -187,8 +190,8 @@
 
   document.getElementById('downloadCsv').addEventListener('click', () => {
     if (!latestResults.length) return;
-    const headers = ['Warmtebron','Investering totaal (€)','Elektrisch vermogen totaal (kW)','Kapitaallasten (€ / woning / jaar)','Beheer en onderhoud (€ / woning / jaar)','Energiekosten (€ / woning / jaar)','CO2-uitstootkosten (€ / woning / jaar)','Netverzwaringskosten (€ / woning / jaar)','Totaal (€ / woning / jaar)'];
-    const rows = latestResults.map(r => [r.label,r.investment_total,r.electric_power_total,r.capital,r.maintenance,r.energy,r.co2,r.grid,r.total]);
+    const headers = ['Warmtebron','Investering per woning (€, afgerond op €500)','Elektrisch vermogen totaal (MW, afgerond op 0,01 MW)','Kapitaallasten (€ / woning / jaar)','Beheer en onderhoud (€ / woning / jaar)','Energiekosten (€ / woning / jaar)','CO2-uitstootkosten (€ / woning / jaar)','Netverzwaringskosten (€ / woning / jaar)','Totaal (€ / woning / jaar)'];
+    const rows = latestResults.map(r => [r.label,roundedInvestment(r.investment_per_home),roundedPowerMW(r.electric_power_total),r.capital,r.maintenance,r.energy,r.co2,r.grid,r.total]);
     const csv = [headers, ...rows].map(row => row.map(v => `"${String(v).replaceAll('"','""')}"`).join(';')).join('\r\n');
     const blob = new Blob(['\ufeff' + csv], {type:'text/csv;charset=utf-8;'});
     const url = URL.createObjectURL(blob);
