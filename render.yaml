@@ -1,0 +1,9 @@
+services:
+  - type: web
+    name: verduurzaamd-warmtesimulatie
+    runtime: docker
+    plan: free
+    healthCheckPath: /health
+    envVars:
+      - key: APP_SECRET_PATH
+        generateValue: true

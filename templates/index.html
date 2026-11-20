@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="nl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex,nofollow,noarchive">
+  <meta name="referrer" content="no-referrer">
+  <title>Warmtesimulatie | VERduurzaamd</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js" defer></script>
+  <script>window.APP_SECRET = {{ secret|tojson }}; window.DEFAULTS = {{ defaults|tojson }};</script>
+  <script src="{{ url_for('static', filename='app.js') }}" defer></script>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand"><span class="brand-mark">V</span><span>VER<span class="brand-light">duurzaamd</span></span></div>
+    <div class="topbar-note">Warmtesimulatie</div>
+  </header>
+
+  <main class="page-shell">
+    <section class="intro">
+      <div class="eyebrow">VERGELIJKING WARMTESYSTEMEN</div>
+      <h1>Wat zijn de kosten per warmtebron?</h1>
+      <p>Pas de uitgangspunten aan en vergelijk de jaarlijkse kosten per woning. De resultaten worden uitgesplitst naar kapitaallasten, beheer en onderhoud, energie, CO₂ en netverzwaring.</p>
+    </section>
+
+    <div class="workspace">
+      <aside class="input-card">
+        <div class="card-heading">
+          <div><div class="section-kicker">SCENARIO</div><h2>Uitgangspunten</h2></div>
+          <button class="text-button" id="resetButton" type="button">Herstellen</button>
+        </div>
+        <form id="simulationForm">
+          <div class="field-grid">
+            <label class="field"><span>Aantal woningen <span class="help-tip" tabindex="0" aria-label="Het aantal woningen waarop de totale kosten worden verdeeld." data-tip="Het aantal woningen waarop de totale kosten worden verdeeld.">i</span></span><span class="input-wrap"><input name="aantal_woningen" type="number" min="1" max="100000" step="1" required><em>woningen</em></span></label>
+            <label class="field"><span>Warmtevraag per woning <span class="help-tip" tabindex="0" aria-label="De jaarlijkse warmtevraag per woning in GJ." data-tip="De jaarlijkse warmtevraag per woning in GJ.">i</span></span><span class="input-wrap"><input name="warmtevraag" type="number" min="1" max="200" step="0.5" required><em>GJ/jaar</em></span></label>
+            <label class="field"><span>Gasprijs 2030 <span class="help-tip" tabindex="0" aria-label="De gehanteerde verwachte gasprijs in 2030." data-tip="De gehanteerde verwachte gasprijs in 2030.">i</span></span><span class="input-wrap"><input name="gasprijs_2030" type="number" min="0" max="10" step="0.01" required><em>€/m³</em></span></label>
+            <label class="field"><span>Elektriciteitsprijs 2030 <span class="help-tip" tabindex="0" aria-label="De gehanteerde elektriciteitsprijs in 2030." data-tip="De gehanteerde elektriciteitsprijs in 2030.">i</span></span><span class="input-wrap"><input name="eprijs_2030" type="number" min="0" max="5" step="0.01" required><em>€/kWh</em></span></label>
+            <label class="field"><span>Rendementseis warmtebedrijf <span class="help-tip" tabindex="0" aria-label="Het vereiste rendement dat wordt gebruikt voor de berekening van de kapitaallasten." data-tip="Het vereiste rendement dat wordt gebruikt voor de berekening van de kapitaallasten.">i</span></span><span class="input-wrap"><input name="rendementseis" type="number" min="0" max="25" step="0.1" required><em>%</em></span></label>
+            <label class="field"><span>Subsidie per woning <span class="help-tip" tabindex="0" aria-label="De subsidie die per aangesloten woning in mindering wordt gebracht." data-tip="De subsidie die per aangesloten woning in mindering wordt gebracht.">i</span></span><span class="input-wrap"><input name="subsidie" type="number" min="0" max="50000" step="100" required><em>€/woning</em></span></label>
+            <label class="field"><span>Prijs per ton CO₂ <span class="help-tip" tabindex="0" aria-label="De gehanteerde kosten voor CO₂-uitstoot." data-tip="De gehanteerde kosten voor CO₂-uitstoot.">i</span></span><span class="input-wrap"><input name="prijs_per_ton_co2" type="number" min="0" max="2000" step="5" required><em>€/ton</em></span></label>
+            <label class="field"><span>Netverzwaringskosten <span class="help-tip" tabindex="0" aria-label="De kosten voor benodigde verzwaring van het elektriciteitsnet." data-tip="De kosten voor benodigde verzwaring van het elektriciteitsnet.">i</span></span><span class="input-wrap"><input name="netverzwaring_kosten" type="number" min="0" max="10000" step="5" required><em>€/kW</em></span></label>
+          </div>
+          <div class="range-block">
+            <div class="range-heading"><label for="density">Gebouwdichtheid <span class="help-tip" tabindex="0" aria-label="De mate waarin woningen geconcentreerd zijn in het gebied." data-tip="De mate waarin woningen geconcentreerd zijn in het gebied.">i</span></label><output id="densityValue">30%</output></div>
+            <input id="density" name="dorp_stad_factor" type="range" min="0" max="100" step="1">
+            <div class="range-labels"><span>Landelijk</span><span>Stedelijk</span></div>
+          </div>
+          <div class="range-block">
+            <div class="range-heading"><label for="apartments">Aandeel appartementen <span class="help-tip" tabindex="0" aria-label="Het percentage appartementen binnen het woningbestand." data-tip="Het percentage appartementen binnen het woningbestand.">i</span></label><output id="apartmentsValue">30%</output></div>
+            <input id="apartments" name="perc_appartementen" type="range" min="0" max="100" step="1">
+            <div class="range-labels"><span>0%</span><span>100%</span></div>
+          </div>
+          <div class="source-select-block">
+            <div class="source-select-heading"><span>Warmtebronnen</span><button type="button" class="text-button" id="toggleSources">Alles uit</button></div>
+            <p class="source-select-help">Selecteer de bronnen die je wilt vergelijken.</p>
+            <div class="source-check-grid">
+              <label><input type="checkbox" name="sources" value="TEA" checked> TEA</label>
+              <label><input type="checkbox" name="sources" value="TEO" checked> TEO</label>
+              <label><input type="checkbox" name="sources" value="CLWP" checked> Centrale lucht-waterwarmtepomp</label>
+              <label><input type="checkbox" name="sources" value="OGEO" checked> Ondiepe geothermie</label>
+              <label><input type="checkbox" name="sources" value="REST" checked> Restwarmte</label>
+              <label><input type="checkbox" name="sources" value="PVT" checked> PVT</label>
+              <label><input type="checkbox" name="sources" value="SOLAR" checked> Zonthermie</label>
+              <label><input type="checkbox" name="sources" value="P2H" checked> Power-to-Heat</label>
+              <label><input type="checkbox" name="sources" value="GK" checked> Individuele gasketel</label>
+              <label><input type="checkbox" name="sources" value="LWP" checked> Individuele lucht-waterwarmtepomp</label>
+              <label><input type="checkbox" name="sources" value="HWP" checked> Individuele hybride warmtepomp</label>
+            </div>
+          </div>
+          <button class="calculate-button" id="calculateButton" type="submit"><span>Bereken kosten</span><span class="button-arrow">→</span></button>
+          <p class="form-footnote">De uitkomsten zijn indicatief en afhankelijk van de gekozen uitgangspunten en de aannames in het rekenmodel.</p>
+        </form>
+      </aside>
+
+      <section class="results-column">
+        <div class="results-card chart-card">
+          <div class="card-heading results-heading">
+            <div><div class="section-kicker">RESULTATEN</div><h2>Jaarlijkse kosten per woning</h2><p class="subheading">Gestapelde vergelijking · €/woning/jaar</p></div>
+            <div class="unit-pill">€/woning/jaar</div>
+          </div>
+          <div id="emptyState" class="empty-state"><div class="empty-icon">↗</div><h3>Bereken jouw scenario</h3><p>Vul links de uitgangspunten in en klik op ‘Bereken kosten’ om de warmtebronnen te vergelijken.</p></div>
+          <div id="chartWrap" class="chart-wrap" hidden><canvas id="costChart" aria-label="Gestapeld staafdiagram met jaarlijkse kosten per warmtebron"></canvas></div>
+          <div id="legend" class="custom-legend" hidden></div>
+          <div id="loading" class="loading-state" hidden><span class="spinner"></span><span>De warmtebronnen worden doorgerekend…</span></div>
+          <div id="errorMessage" class="error-message" role="alert" hidden></div>
+        </div>
+
+        <div class="results-card table-card" id="tableCard" hidden>
+          <div class="card-heading"><div><div class="section-kicker">DETAILS</div><h2>Kosten per warmtebron</h2></div><button class="text-button" id="downloadCsv" type="button">Download CSV ↓</button></div>
+          <div class="table-scroll"><table id="resultsTable">
+            <thead><tr><th>Warmtebron</th><th>Kapitaal*</th><th>Beheer &amp; onderhoud</th><th>Energie</th><th>CO₂</th><th>Netverzwaring</th><th class="total-col">Totaal</th></tr></thead>
+            <tbody></tbody>
+          </table></div>
+          <p class="table-note">* Kapitaallasten zijn bij collectieve bronnen gecorrigeerd voor de jaarlijkse subsidie. Alle bedragen zijn per woning per jaar.</p>
+        </div>
+        <div class="method-note" id="methodNote" hidden><span class="info-dot">i</span><span>De berekeningen worden uitgevoerd met het door VERduurzaamd aangeleverde Excel-rekenmodel. De individuele gasketel, lucht-waterwarmtepomp en hybride warmtepomp zijn opgenomen als referenties.</span></div>
+      </section>
+    </div>
+    <footer><span>VERduurzaamd</span><span>Onafhankelijk advies in duurzame warmte</span></footer>
+  </main>
+</body>
+</html>
