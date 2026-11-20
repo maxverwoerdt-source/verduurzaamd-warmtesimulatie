@@ -51,17 +51,26 @@
     fillDefaults();
     sourceChecks.forEach(input => input.checked = true);
     updateSourceToggle();
+    if (latestResults.length) renderChart(getChartResults());
     errorMessage.hidden = true;
+    if (!latestResults.length) {
+      emptyState.querySelector("h3").textContent = "Bereken jouw scenario";
+      emptyState.querySelector("p").textContent = "Vul links de uitgangspunten in en klik op ‘Bereken kosten’ om de warmtebronnen te vergelijken.";
+    }
   });
   function updateSourceToggle() {
     const checked = sourceChecks.filter(input => input.checked).length;
     sourceToggle.textContent = checked === sourceChecks.length ? 'Alles uit' : 'Alles aan';
   }
-  sourceChecks.forEach(input => input.addEventListener('change', updateSourceToggle));
+  sourceChecks.forEach(input => input.addEventListener('change', () => {
+    updateSourceToggle();
+    if (latestResults.length) renderChart(getChartResults());
+  }));
   sourceToggle.addEventListener('click', () => {
     const turnOn = sourceChecks.some(input => !input.checked);
     sourceChecks.forEach(input => input.checked = turnOn);
     updateSourceToggle();
+    if (latestResults.length) renderChart(getChartResults());
   });
   updateSourceToggle();
   fillDefaults();
@@ -72,7 +81,21 @@
     calculateButton.querySelector('span:first-child').textContent = active ? 'Bezig met berekenen…' : 'Bereken kosten';
   }
 
+  function getChartResults() {
+    const selected = new Set(sourceChecks.filter(input => input.checked).map(input => input.value));
+    return latestResults.filter(result => selected.has(result.key));
+  }
+
   function renderChart(results) {
+    if (!results.length) {
+      if (chart) { chart.destroy(); chart = null; }
+      chartWrap.hidden = true;
+      legend.hidden = true;
+      emptyState.hidden = false;
+      emptyState.querySelector("h3").textContent = "Geen warmtebronnen geselecteerd";
+      emptyState.querySelector("p").textContent = "Zet één of meer warmtebronnen aan om deze in de grafiek te tonen.";
+      return;
+    }
     emptyState.hidden = true;
     chartWrap.hidden = false;
     legend.hidden = false;
@@ -150,7 +173,7 @@
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || 'De berekening is niet gelukt.');
       latestResults = data.results;
-      renderChart(latestResults);
+      renderChart(getChartResults());
       renderTable(latestResults);
     } catch (error) {
       errorMessage.textContent = error.message || 'Er is iets misgegaan bij het berekenen.';

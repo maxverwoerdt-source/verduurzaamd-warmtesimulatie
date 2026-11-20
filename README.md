@@ -15,3 +15,10 @@ Alle warmtebronnen worden in één run van het Excel-rekenmodel doorgerekend. De
 Collectief: TEA, TEO, centrale lucht-waterwarmtepomp, ondiepe geothermie, restwarmte, PVT, zonthermie en Power-to-Heat.
 
 Individuele referenties: lucht-waterwarmtepomp, hybride warmtepomp en gasketel.
+
+
+### Rekentijden loggen
+
+De server logt per berekening de fasetijden: model kopiëren, Excel-model laden en invoer verwerken, opslaan, LibreOffice-herberekening, resultaten uitlezen en totale aanvraagduur. Zoek in Render Logs naar `CALC PHASE` en `CALC TIMING`.
+
+De warmtebron-checkboxes zijn uitsluitend grafiekfilters. Alle 11 bronnen worden altijd berekend en blijven beschikbaar in de resultaten-/CSV-tabel. Filters kunnen ook na een berekening worden aangepast.

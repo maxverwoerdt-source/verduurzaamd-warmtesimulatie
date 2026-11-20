@@ -1,10 +1,11 @@
 """Excel-backed calculator. All heat sources are calculated in one workbook run."""
 from __future__ import annotations
-import math, shutil, subprocess, tempfile, threading
+import math, shutil, subprocess, tempfile, threading, time, logging
 from pathlib import Path
 import openpyxl
 
 BASE_DIR=Path(__file__).resolve().parent
+logger=logging.getLogger(__name__)
 MODEL_FILE=BASE_DIR/"model"/"rekenmodel.xlsm"
 _LOCK=threading.Lock()
 SOURCES=[
@@ -26,13 +27,13 @@ def _finite(v, cell):
     return x
 
 def _run_workbook(values, temp):
+    total_start=time.perf_counter()
     if not MODEL_FILE.exists(): raise RuntimeError("Het Excel-rekenmodel ontbreekt op de server.")
     profile=Path(temp)/"lo-profile"
     inp=Path(temp)/"input.xlsm"
     outdir=Path(temp)/"recalc"; outdir.mkdir()
-    shutil.copy2(MODEL_FILE,inp)
-    wb=openpyxl.load_workbook(inp,keep_vba=True)
-    ws=wb["Input"]
+    t=time.perf_counter(); shutil.copy2(MODEL_FILE,inp); logger.warning("CALC PHASE model_copy=%.3fs",time.perf_counter()-t)
+    t=time.perf_counter(); wb=openpyxl.load_workbook(inp,keep_vba=True); ws=wb["Input"]
     inputs={
       "B22":values["aantal_woningen"],"B23":values["warmtevraag"],
       "B24":values["dorp_stad_factor"]/100,"B25":values["perc_appartementen"]/100,
@@ -41,14 +42,18 @@ def _run_workbook(values, temp):
       "B33":values["prijs_per_ton_co2"],"B34":values["netverzwaring_kosten"]}
     for cell,value in inputs.items(): ws[cell]=value
     wb.calculation.fullCalcOnLoad=True; wb.calculation.forceFullCalc=True; wb.calculation.calcMode="auto"
-    wb.save(inp); wb.close()
-    cmd=["libreoffice",f"-env:UserInstallation=file://{profile}","--headless","--convert-to","xlsx","--outdir",str(outdir),str(inp)]
+    logger.warning("CALC PHASE model_load_and_inputs=%.3fs",time.perf_counter()-t)
+    t=time.perf_counter(); wb.save(inp); wb.close(); logger.warning("CALC PHASE workbook_save=%.3fs",time.perf_counter()-t)
+    t=time.perf_counter(); cmd=["libreoffice",f"-env:UserInstallation=file://{profile}","--headless","--convert-to","xlsx","--outdir",str(outdir),str(inp)]
     run=subprocess.run(cmd,capture_output=True,text=True,timeout=100)
     resultfile=outdir/"input.xlsx"
+    logger.warning("CALC PHASE libreoffice=%.3fs returncode=%s",time.perf_counter()-t,run.returncode)
     if run.returncode!=0 or not resultfile.exists():
       raise RuntimeError("Excel-rekenmodel kon niet worden herberekend: "+(run.stderr or run.stdout)[-700:])
-    resultwb=openpyxl.load_workbook(resultfile,data_only=True,read_only=True)
-    return resultwb,resultwb["Input"]
+    t=time.perf_counter(); resultwb=openpyxl.load_workbook(resultfile,data_only=True,read_only=True); ws_result=resultwb["Input"]
+    logger.warning("CALC PHASE results_load=%.3fs",time.perf_counter()-t)
+    logger.warning("CALC TIMING workbook_total=%.3fs",time.perf_counter()-total_start)
+    return resultwb,ws_result
 
 def _read_source(ws,key,label,col,collective):
     capital=_finite(ws[f"{col}32"].value,f"{col}32")
@@ -63,15 +68,12 @@ def _read_source(ws,key,label,col,collective):
       "detail":"Rechtstreeks berekend door het Excel-rekenmodel"}
 
 def calculate(values):
-    selected=set(values.get("sources") or [s[0] for s in SOURCES])
-    allowed={s[0] for s in SOURCES}
-    if not selected or not selected<=allowed: raise ValueError("Selecteer minimaal één geldige warmtebron.")
     results=[]
-    # One complete calculation for all technologies, regardless of the selected display filters.
+    # All sources are always calculated; the source checkboxes are display filters only.
     with _LOCK:
       with tempfile.TemporaryDirectory(prefix="verduurzaamd-calc-") as temp:
         wb,ws=_run_workbook(values,temp)
         for key,label,col,collective in SOURCES:
-          if key in selected: results.append(_read_source(ws,key,label,col,collective))
+          results.append(_read_source(ws,key,label,col,collective))
         wb.close()
     return results

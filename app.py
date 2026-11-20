@@ -1,6 +1,8 @@
 import hmac
 import math
 import os
+import time
+import logging
 import re
 from pathlib import Path
 
@@ -19,12 +21,12 @@ app = Flask(__name__)
 DEFAULTS = {
     "aantal_woningen": 1000,
     "warmtevraag": 30,
-    "gasprijs_2030": 5.00,
+    "gasprijs_2030": 1.70,
     "eprijs_2030": 0.25,
     "rendementseis": 6.0,
     "subsidie": 5000,
-    "prijs_per_ton_co2": 100,
-    "netverzwaring_kosten": 50,
+    "prijs_per_ton_co2": 200,
+    "netverzwaring_kosten": 100,
     "dorp_stad_factor": 30,
     "perc_appartementen": 80,
 }
@@ -60,7 +62,7 @@ def _validate(payload):
     selected_sources = payload.get("sources")
     if selected_sources is None:
         selected_sources = list(allowed_sources)
-    if not isinstance(selected_sources, list) or not selected_sources or any(x not in allowed_sources for x in selected_sources):
+    if not isinstance(selected_sources, list) or any(x not in allowed_sources for x in selected_sources):
         raise ValueError("Selecteer minimaal één geldige warmtebron.")
     clean["sources"] = selected_sources
     return clean
@@ -86,14 +88,21 @@ def index(secret):
 def api_calculate(secret):
     if not hmac.compare_digest(secret, SECRET_PATH):
         abort(404)
+    request_start=time.perf_counter()
     try:
+        validation_start=time.perf_counter()
         values = _validate(request.get_json(silent=True) or {})
+        app.logger.warning("CALC PHASE validation=%.3fs",time.perf_counter()-validation_start)
+        calculation_start=time.perf_counter()
         results = calculate_python_model(values)
+        app.logger.warning("CALC PHASE engine=%.3fs",time.perf_counter()-calculation_start)
+        app.logger.warning("CALC REQUEST success duration=%.3fs sources=%d",time.perf_counter()-request_start,len(results))
         return _secure_response(make_response(jsonify({"inputs": values, "results": results})))
     except ValueError as exc:
+        app.logger.warning("CALC REQUEST validation_error duration=%.3fs error=%s",time.perf_counter()-request_start,exc)
         return _secure_response(make_response(jsonify({"error": str(exc)}), 400))
     except Exception:
-        app.logger.exception("Python-berekening mislukt")
+        app.logger.exception("Python-berekening mislukt; duration=%.3fs",time.perf_counter()-request_start)
         return _secure_response(make_response(jsonify({"error": "De berekening is niet gelukt. Controleer de invoer of probeer het opnieuw."}), 500))
 
 
