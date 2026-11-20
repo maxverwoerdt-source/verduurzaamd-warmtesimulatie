@@ -123,9 +123,13 @@ def calculate(values):
         with tempfile.TemporaryDirectory(prefix="verduurzaamd-calc-") as t:
             if not MODEL_FILE.exists(): raise RuntimeError("Het Excel-rekenmodel ontbreekt op de server.")
             userprofile=Path(t)/"lo-profile"; inp=Path(t)/"input.xlsm"; outdir=Path(t)/"recalc"; outdir.mkdir()
+            phase_started = perf_counter()
             shutil.copy2(MODEL_FILE,inp)
+            logger.warning("CALC PHASE copy_model=%.3fs", perf_counter()-phase_started)
+            phase_started = perf_counter()
             wb=openpyxl.load_workbook(inp,keep_vba=True)
             ws,cost=_set_inputs_direct(wb,values)
+            logger.warning("CALC PHASE openpyxl_load_and_inputs=%.3fs", perf_counter()-phase_started)
             # No selector lookup: helper result rows calculate source-specific
             # outputs using direct references to the source and pipe worksheets.
             for key,label,selector in COLLECTIVE:
@@ -148,15 +152,19 @@ def calculate(values):
             save_started = perf_counter()
             wb.save(inp); wb.close()
             save_seconds = perf_counter() - save_started
+            logger.warning("CALC PHASE workbook_save=%.3fs", save_seconds)
             cmd=["libreoffice",f"-env:UserInstallation=file://{userprofile}","--headless","--convert-to","xlsx","--outdir",str(outdir),str(inp)]
             lo_started = perf_counter()
             run=subprocess.run(cmd,capture_output=True,text=True,timeout=100)
             lo_seconds = perf_counter() - lo_started
+            logger.warning("CALC PHASE libreoffice=%.3fs returncode=%s stdout=%s stderr=%s", lo_seconds, run.returncode, (run.stdout or "")[-300:], (run.stderr or "")[-300:])
             resultfile=outdir/"input.xlsx"
             if run.returncode!=0 or not resultfile.exists():
                 raise RuntimeError("Excel-rekenmodel kon niet worden herberekend: "+(run.stderr or run.stdout)[-700:])
+            phase_started = perf_counter()
             resultwb=openpyxl.load_workbook(resultfile,data_only=True,read_only=True)
             rws=resultwb["Input"]
+            logger.warning("CALC PHASE result_load=%.3fs", perf_counter()-phase_started)
             for key,label,selector in COLLECTIVE:
                 if key not in selected: continue
                 col=SOURCE_COL[key]
@@ -172,5 +180,5 @@ def calculate(values):
             for key,label,col in INDIVIDUAL:
                 if key in selected: results.append(_read_source(rws,col,label,key))
             resultwb.close()
-            logger.info("Calc timings: queue=%.3fs workbook_save=%.3fs libreoffice=%.3fs total=%.3fs sources=%d", queue_seconds, save_seconds, lo_seconds, perf_counter()-request_started, len(results))
+            logger.warning("CALC TIMING queue=%.3fs workbook_save=%.3fs libreoffice=%.3fs total=%.3fs sources=%d", queue_seconds, save_seconds, lo_seconds, perf_counter()-request_started, len(results))
     return results

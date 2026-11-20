@@ -127,10 +127,11 @@ def api_calculate(secret):
     try:
         values = _validate(request.get_json(silent=True) or {})
         calc_id, started_clock = _log_start(values)
+        app.logger.warning("CALC REQUEST %s started sources=%s", calc_id, values.get("sources"))
         try:
             results = calculate_python_model(values)
             duration = round(perf_counter() - started_clock, 3)
-            app.logger.info("Berekening %s succesvol afgerond in %.3f s (%d bronnen)", calc_id, duration, len(results))
+            app.logger.warning("CALC REQUEST %s success duration=%.3fs sources=%d", calc_id, duration, len(results))
             _log_finish(calc_id, started_clock, "success")
             return _secure_response(make_response(jsonify({"calculation_id": calc_id, "inputs": values, "results": results})))
         except Exception as exc:
