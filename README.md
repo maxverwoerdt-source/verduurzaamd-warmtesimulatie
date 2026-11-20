@@ -1,24 +1,21 @@
-# VERduurzaamd Warmtesimulatie
+# VERduurzaamd warmtesimulatie
 
-Webapp voor het vergelijken van jaarlijkse kosten van verschillende warmteconcepten. De berekeningen worden uitgevoerd met het Excel-rekenmodel van VERduurzaamd.
+Deze versie gebruikt het herstelde native Python-rekenmodel in `p2h_model/`.
+De berekening draait zonder Excel, LibreOffice of workbook-conversies. De API en
+website-output blijven compatibel met de bestaande front-end. Alle warmtebronnen
+worden altijd berekend; de bronselectie in de interface is alleen een weergavefilter.
 
-## Installatie / deployment
+## Lokaal draaien
 
-De applicatie is ingericht voor deployment op Render via de meegeleverde `render.yaml` en Dockerfile. Stel de omgevingsvariabele `APP_SECRET_PATH` in op een willekeurige geheime URL-string van minimaal 20 tekens.
+```bash
+pip install -r requirements.txt
+APP_SECRET_PATH='kies-een-lange-willekeurige-url-token' python app.py
+```
 
-## Berekeningen
+Open daarna `http://localhost:5000/<APP_SECRET_PATH>`.
 
-Alle warmtebronnen worden in één run van het Excel-rekenmodel doorgerekend. De berekening kan tientallen seconden duren. De website toont hiervoor een melding aan de gebruiker.
+## Deploy
 
-## Warmtebronnen
-
-Collectief: TEA, TEO, centrale lucht-waterwarmtepomp, ondiepe geothermie, restwarmte, PVT, zonthermie en Power-to-Heat.
-
-Individuele referenties: lucht-waterwarmtepomp, hybride warmtepomp en gasketel.
-
-
-### Rekentijden loggen
-
-De server logt per berekening de fasetijden: model kopiëren, Excel-model laden en invoer verwerken, opslaan, LibreOffice-herberekening, resultaten uitlezen en totale aanvraagduur. Zoek in Render Logs naar `CALC PHASE` en `CALC TIMING`.
-
-De warmtebron-checkboxes zijn uitsluitend grafiekfilters. Alle 11 bronnen worden altijd berekend en blijven beschikbaar in de resultaten-/CSV-tabel. Filters kunnen ook na een berekening worden aangepast.
+Render gebruikt Docker en `render.yaml`. De `APP_SECRET_PATH` wordt door Render
+gegenereerd. De rekenengine is pure Python en heeft geen Excel- of LibreOffice-
+installatie nodig.
