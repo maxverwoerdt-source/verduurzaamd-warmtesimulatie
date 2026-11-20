@@ -1,18 +1,17 @@
-# VERduurzaamd warmtesimulatie
+# VERduurzaamd Warmtesimulatie
 
-De rekenuitkomsten blijven gebaseerd op het Excel-rekenmodel. Python verzorgt invoer, bronselectie, tijdelijke werkbestanden, herberekening via LibreOffice en presentatie van resultaten.
+Webapp voor het vergelijken van jaarlijkse kosten van verschillende warmteconcepten. De berekeningen worden uitgevoerd met het Excel-rekenmodel van VERduurzaamd.
 
-## Rekenen
-- De berekeningsinvoer wordt rechtstreeks gezet op `Kosten bronnen` en `Kosten leidingwerk`.
-- De collectieve bronnen worden in één LibreOffice-herberekening naast elkaar berekend. De oude `X.ZOEKEN`-formules in de actieve Input-uitvoer worden niet meer gebruikt.
-- Individuele alternatieven worden in dezelfde workbook-run berekend.
-- Iedere berekening heeft eigen tijdelijke bestanden en een eigen LibreOffice-profiel.
-- Gelijktijdigheid is begrensd via `CALC_CONCURRENCY` (standaard 2).
+## Installatie / deployment
 
-## Logging
-Elke berekening krijgt een ID, start/eindtijd, status, duur, parameters, geselecteerde bronnen en eventuele foutmelding. Logging gebeurt in SQLite. De beveiligde endpoint `/<APP_SECRET_PATH>/api/logs` geeft de laatste 100 berekeningen terug.
+De applicatie is ingericht voor deployment op Render via de meegeleverde `render.yaml` en Dockerfile. Stel de omgevingsvariabele `APP_SECRET_PATH` in op een willekeurige geheime URL-string van minimaal 20 tekens.
 
-`LOG_DIR` kan worden ingesteld op een persistent volume. Zonder persistent Render-disk zijn logs lokaal op de container en kunnen ze bij herstart/deploy verloren gaan.
+## Berekeningen
 
-## Deploy
-Render gebruikt Docker en LibreOffice Calc. Stel `APP_SECRET_PATH` in (Render genereert deze via `render.yaml`).
+Alle warmtebronnen worden in één run van het Excel-rekenmodel doorgerekend. De berekening kan tientallen seconden duren. De website toont hiervoor een melding aan de gebruiker.
+
+## Warmtebronnen
+
+Collectief: TEA, TEO, centrale lucht-waterwarmtepomp, ondiepe geothermie, restwarmte, PVT, zonthermie en Power-to-Heat.
+
+Individuele referenties: lucht-waterwarmtepomp, hybride warmtepomp en gasketel.

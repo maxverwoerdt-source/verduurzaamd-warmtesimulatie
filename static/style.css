@@ -13,3 +13,5 @@
 .source-check-grid{display:grid;grid-template-columns:1fr;gap:8px;max-height:220px;overflow:auto;padding-right:3px}
 .source-check-grid label{display:flex;align-items:flex-start;gap:8px;font-size:11px;line-height:1.35;color:#5e655a;cursor:pointer}
 .source-check-grid input{accent-color:var(--olive);margin:1px 0 0;flex:0 0 auto}
+
+.calculation-warning { margin: 12px 0 8px; font-size: 0.85rem; line-height: 1.5; color: #8b6d3d; }
