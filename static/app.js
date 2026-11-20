@@ -144,6 +144,8 @@
     tbody.innerHTML = results.map(row => `
       <tr>
         <td title="${row.detail || ''}">${row.label}</td>
+        <td>${euro(row.investment_total)}</td>
+        <td>${number(row.electric_power_total)} kW</td>
         <td>${euro(row.capital)}</td>
         <td>${euro(row.maintenance)}</td>
         <td>${euro(row.energy)}</td>
@@ -185,8 +187,8 @@
 
   document.getElementById('downloadCsv').addEventListener('click', () => {
     if (!latestResults.length) return;
-    const headers = ['Warmtebron','Kapitaallasten','Beheer en onderhoud','Energiekosten','CO2-uitstootkosten','Netverzwaringskosten','Totaal'];
-    const rows = latestResults.map(r => [r.label,r.capital,r.maintenance,r.energy,r.co2,r.grid,r.total]);
+    const headers = ['Warmtebron','Investering totaal (€)','Elektrisch vermogen totaal (kW)','Kapitaallasten (€ / woning / jaar)','Beheer en onderhoud (€ / woning / jaar)','Energiekosten (€ / woning / jaar)','CO2-uitstootkosten (€ / woning / jaar)','Netverzwaringskosten (€ / woning / jaar)','Totaal (€ / woning / jaar)'];
+    const rows = latestResults.map(r => [r.label,r.investment_total,r.electric_power_total,r.capital,r.maintenance,r.energy,r.co2,r.grid,r.total]);
     const csv = [headers, ...rows].map(row => row.map(v => `"${String(v).replaceAll('"','""')}"`).join(';')).join('\r\n');
     const blob = new Blob(['\ufeff' + csv], {type:'text/csv;charset=utf-8;'});
     const url = URL.createObjectURL(blob);

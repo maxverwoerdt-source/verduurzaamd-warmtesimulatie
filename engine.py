@@ -30,12 +30,14 @@ def calculate(values):
     start = time.perf_counter()
     inp = InputParams.from_dict(values)
     raw = {}
+    capacities = {}
     # Calculate every source. UI source toggles are only display filters.
     for source in ["TEA", "TEO", "REST", "CLWP", "OGEO", "P2H", "PVTE", "SOLAR"]:
         inp.bron = source
         source_result = bereken_kosten_bron(inp)
         pipe_result = bereken_leidingwerk(inp)
         raw[source] = bereken_totaal(inp, source_result, pipe_result).to_dict()
+        capacities[source] = (source_result.cap_wp_mw, source_result.kengetallen.kwe_divisor)
     for source in ["GK", "LWP", "HWP"]:
         inp.bron = source
         raw[source] = bereken_individueel(inp).to_dict()
@@ -51,9 +53,17 @@ def calculate(values):
         energy = data["energiekosten_per_weq_eur_per_jaar"]
         co2 = data["co2_kosten_per_weq_eur"]
         grid = data["net_kosten_per_weq_eur"]
+        investment_per_home = data["investering_per_weq_eur"]
+        if key in {"GK", "LWP", "HWP"}:
+            electrical_kw_per_home = {"GK": 0.0, "LWP": 3.35, "HWP": 2.0}[key]
+        else:
+            cap_wp_mw, kwe_divisor = capacities[key_map.get(key, key)]
+            electrical_kw_per_home = cap_wp_mw / kwe_divisor * 1000.0
         results.append({
             "key": key,
             "label": LABELS[key],
+            "investment_total": investment_per_home * values["aantal_woningen"],
+            "electric_power_total": electrical_kw_per_home * values["aantal_woningen"],
             "capital": capital,
             "maintenance": maintenance,
             "energy": energy,
